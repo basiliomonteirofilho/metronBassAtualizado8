@@ -1,0 +1,785 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Personalização de Baixo e Bateria</title>
+    <style>
+    body {
+    font-family: Arial, sans-serif;
+    background-color: #f4f4f4;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+}
+
+.container {
+    background-color: #fff;
+    padding: 20px;
+    border-radius: 10px;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+    width: 90%;
+    max-width: 1200px;
+    text-align: center;
+    position: relative;
+}
+
+.matriz-container {
+    overflow-x: auto;
+    margin-bottom: 20px;
+}
+
+.matriz-bateria, .matriz-baixo {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    width: max-content;
+}
+
+.linha-bateria, .linha-baixo {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.nome-instrumento {
+    width: 100px;
+    text-align: right;
+    font-weight: bold;
+    flex-shrink: 0;
+}
+
+.conjuntos-container {
+    display: flex;
+    gap: 10px;
+}
+
+.conjunto {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    position: relative;
+}
+
+.numero-conjunto {
+    text-align: center;
+    font-weight: bold;
+    margin-bottom: 5px;
+}
+
+.celulas-compasso {
+    display: flex;
+    gap: 5px;
+}
+
+.celula {
+    width: 40px;
+    height: 40px;
+    background-color: #e0e0e0;
+    border: 1px solid #ccc;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    flex-shrink: 0;
+}
+
+.celula.ativa {
+    background-color: #4caf50;
+}
+
+.celula.iluminada {
+    background-color: #ffeb3b;
+}
+
+.edicao-baixo {
+    margin-top: 20px;
+}
+
+.botoes {
+    margin-top: 20px;
+}
+
+.botoes button {
+    padding: 10px 20px;
+    font-size: 16px;
+    margin: 5px;
+    cursor: pointer;
+}
+
+.adicionar-conjunto {
+    margin-left: 10px;
+    cursor: pointer;
+    font-size: 24px;
+    color: #4caf50;
+}
+
+.remover-conjunto {
+    position: absolute;
+    top: 0;
+    right: 0;
+    background-color: #ff5252;
+    color: white;
+    border: none;
+    border-radius: 50%;
+    width: 20px;
+    height: 20px;
+    font-size: 12px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+}
+
+.menu-notas {
+    position: fixed;
+    background-color: white;
+    border: 1px solid #ccc;
+    padding: 10px;
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 5px;
+    z-index: 1000;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+}
+
+.menu-notas button {
+    padding: 5px;
+    font-size: 12px;
+    cursor: pointer;
+    border: 1px solid #ccc;
+    background-color: #f9f9f9;
+    transition: background-color 0.2s;
+}
+
+.menu-notas button:hover {
+    background-color: #e0e0e0;
+}
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Personalização de Baixo e Bateria</h1>
+
+        <!-- Controles de BPM -->
+        <div class="controles">
+            <label for="bpm">BPM:</label>
+            <input type="number" id="bpm" value="60" min="1" max="300">
+            <button onclick="play()">Play</button>
+            <button onclick="stop()">Stop</button>
+        </div>
+
+        <!-- Matriz de Bateria -->
+        <div class="matriz-bateria-container">
+            <div class="matriz-bateria" id="matriz-bateria"></div>
+        </div>
+
+        <!-- Botão para adicionar conjunto -->
+        <div class="botoes">
+            <button onclick="adicionarConjunto()">Adicionar Compasso</button>
+        </div>
+
+        <!-- Edição de Baixo -->
+        <div class="edicao-baixo">
+            <h2>Edição de Baixo</h2>
+            <div class="matriz-bateria-container">
+                <div class="matriz-baixo" id="matriz-baixo"></div>
+            </div>
+        </div>
+
+        <!-- Botões de Ação -->
+        <div class="botoes">
+            <button onclick="salvarPersonalizacao()">Salvar</button>
+            <button onclick="carregarPersonalizacao()">Carregar</button>
+        </div>
+    </div>
+
+    <script>
+        // Definição dos instrumentos da bateria
+        const instrumentosBateria = [
+            { nome: "Bumbo", arquivo: "Bumbo.mp3" },
+            { nome: "Caixa", arquivo: "Caixa.mp3" },
+            { nome: "Chimbal", arquivo: "Chimbal.mp3" },
+            { nome: "Condução", arquivo: "Conducao.mp3" },
+            { nome: "Tom 1", arquivo: "Tom1.mp3" },
+            { nome: "Tom 2", arquivo: "Tom2.mp3" },
+            { nome: "Surdo", arquivo: "Surdo.mp3" },
+            { nome: "Ataque", arquivo: "Ataque.mp3" }
+        ];
+
+        // Matriz de células (8 células por conjunto)
+        let matrizBateria = [];
+        // Armazenar as notas do baixo
+        let matrizBaixo = {
+            prolongado: [],
+            meioCompasso: [],
+            duasColunas: [],
+            padrao: []
+        };
+
+        // Notas disponíveis
+        const notas = [
+            "A", "A8", "A16",
+            "AS", "A8S", "A16S",
+            "B", "B8", "B16",
+            "C", "C8", "C16",
+            "CS", "C8S", "C16S",
+            "D", "D8", "D16",
+            "DS", "D8S", "D16S",
+            "E", "E8", "E16", "E24",
+            "F", "F8", "F16", "F24",
+            "FS", "FS8", "FS16", "FS24",
+            "G", "G8", "G16", "G24",
+            "GS", "GS8", "GS16", "GS24",
+            "Pausa"
+        ];
+
+        // Função para criar a matriz gráfica da bateria
+        function criarMatrizBateria() {
+            const matrizContainer = document.getElementById("matriz-bateria");
+            matrizContainer.innerHTML = "";
+
+            instrumentosBateria.forEach((instrumento, linha) => {
+                const linhaBateria = document.createElement("div");
+                linhaBateria.classList.add("linha-bateria");
+
+                const nomeInstrumento = document.createElement("div");
+                nomeInstrumento.classList.add("nome-instrumento");
+                nomeInstrumento.textContent = instrumento.nome;
+                linhaBateria.appendChild(nomeInstrumento);
+
+                const conjuntosContainer = document.createElement("div");
+                conjuntosContainer.classList.add("conjuntos-container");
+
+                matrizBateria[linha].forEach((conjunto, conjuntoIndex) => {
+                    const conjuntoDiv = document.createElement("div");
+                    conjuntoDiv.classList.add("conjunto");
+
+                    // Adiciona o número do conjunto apenas na primeira linha
+                    if (linha === 0) {
+                        const numeroConjunto = document.createElement("div");
+                        numeroConjunto.classList.add("numero-conjunto");
+                        numeroConjunto.textContent = `${conjuntoIndex + 1}`;
+                        conjuntoDiv.appendChild(numeroConjunto);
+                        
+                        // Adiciona botão para remover o conjunto
+                        const botaoRemover = document.createElement("button");
+                        botaoRemover.classList.add("remover-conjunto");
+                        botaoRemover.textContent = "×";
+                        botaoRemover.onclick = (e) => {
+                            e.stopPropagation();
+                            removerConjunto(conjuntoIndex);
+                        };
+                        conjuntoDiv.appendChild(botaoRemover);
+                    }
+
+                    const celulasCompasso = document.createElement("div");
+                    celulasCompasso.classList.add("celulas-compasso");
+
+                    conjunto.forEach((celulaAtiva, indice) => {
+                        const celula = document.createElement("div");
+                        celula.classList.add("celula");
+                        celula.dataset.linha = linha;
+                        celula.dataset.conjunto = conjuntoIndex;
+                        celula.dataset.indice = indice;
+
+                        if (celulaAtiva) {
+                            celula.classList.add("ativa");
+                        }
+
+                        celula.addEventListener("click", () => {
+                            const linhaIdx = parseInt(celula.dataset.linha);
+                            const conjuntoIdx = parseInt(celula.dataset.conjunto);
+                            const indice = parseInt(celula.dataset.indice);
+
+                            matrizBateria[linhaIdx][conjuntoIdx][indice] = !matrizBateria[linhaIdx][conjuntoIdx][indice];
+                            celula.classList.toggle("ativa", matrizBateria[linhaIdx][conjuntoIdx][indice]);
+                        });
+
+                        celulasCompasso.appendChild(celula);
+                    });
+
+                    conjuntoDiv.appendChild(celulasCompasso);
+                    conjuntosContainer.appendChild(conjuntoDiv);
+                });
+
+                linhaBateria.appendChild(conjuntosContainer);
+                matrizContainer.appendChild(linhaBateria);
+            });
+        }
+
+        // Função para criar a matriz gráfica do baixo
+        function criarMatrizBaixo() {
+            const baixoContainer = document.getElementById("matriz-baixo");
+            baixoContainer.innerHTML = "";
+
+            // Linha 1: Baixo prolongado (1 célula por conjunto)
+            const linhaProlongado = document.createElement("div");
+            linhaProlongado.classList.add("linha-baixo");
+            linhaProlongado.innerHTML = `<div class="nome-instrumento">Baixo Prolongado</div>`;
+            const conjuntosProlongado = document.createElement("div");
+            conjuntosProlongado.classList.add("conjuntos-container");
+
+            // Adiciona uma célula de Baixo Prolongado por conjunto
+            for (let c = 0; c < matrizBateria[0].length; c++) {
+                const celulaProlongado = document.createElement("div");
+                celulaProlongado.classList.add("celula");
+                celulaProlongado.style.width = `${8 * 46}px`;
+                celulaProlongado.dataset.conjunto = c;
+                celulaProlongado.dataset.tipo = "prolongado";
+                
+                // Restaura a nota se existir
+                if (matrizBaixo.prolongado[c]) {
+                    celulaProlongado.textContent = matrizBaixo.prolongado[c];
+                }
+                
+                celulaProlongado.addEventListener("click", () => mostrarMenuNotas(celulaProlongado));
+                configurarCliqueDuplo(celulaProlongado);
+                conjuntosProlongado.appendChild(celulaProlongado);
+            }
+            linhaProlongado.appendChild(conjuntosProlongado);
+            baixoContainer.appendChild(linhaProlongado);
+
+            // Linha 2: Baixo de meio compasso (2 células por conjunto)
+            const linhaMeioCompasso = document.createElement("div");
+            linhaMeioCompasso.classList.add("linha-baixo");
+            linhaMeioCompasso.innerHTML = `<div class="nome-instrumento">Baixo Meio Compasso</div>`;
+            const conjuntosMeioCompasso = document.createElement("div");
+            conjuntosMeioCompasso.classList.add("conjuntos-container");
+
+            // Adiciona 2 células de Baixo Meio Compasso por conjunto
+            for (let c = 0; c < matrizBateria[0].length; c++) {
+                const celulaMeio1 = document.createElement("div");
+                celulaMeio1.classList.add("celula");
+                celulaMeio1.style.width = `${4 * 44.5}px`;
+                celulaMeio1.dataset.conjunto = c;
+                celulaMeio1.dataset.tipo = "meioCompasso";
+                celulaMeio1.dataset.indice = 0;
+                
+                // Restaura a nota se existir
+                if (matrizBaixo.meioCompasso[c] && matrizBaixo.meioCompasso[c][0]) {
+                    celulaMeio1.textContent = matrizBaixo.meioCompasso[c][0];
+                }
+                
+                celulaMeio1.addEventListener("click", () => mostrarMenuNotas(celulaMeio1));
+                configurarCliqueDuplo(celulaMeio1);
+
+                const celulaMeio2 = document.createElement("div");
+                celulaMeio2.classList.add("celula");
+                celulaMeio2.style.width = `${4 * 44.5}px`;
+                celulaMeio2.dataset.conjunto = c;
+                celulaMeio2.dataset.tipo = "meioCompasso";
+                celulaMeio2.dataset.indice = 1;
+                
+                // Restaura a nota se existir
+                if (matrizBaixo.meioCompasso[c] && matrizBaixo.meioCompasso[c][1]) {
+                    celulaMeio2.textContent = matrizBaixo.meioCompasso[c][1];
+                }
+                
+                celulaMeio2.addEventListener("click", () => mostrarMenuNotas(celulaMeio2));
+                configurarCliqueDuplo(celulaMeio2);
+
+                conjuntosMeioCompasso.appendChild(celulaMeio1);
+                conjuntosMeioCompasso.appendChild(celulaMeio2);
+            }
+            linhaMeioCompasso.appendChild(conjuntosMeioCompasso);
+            baixoContainer.appendChild(linhaMeioCompasso);
+
+            // Linha 3: Baixo de duas colunas (4 células por conjunto)
+            const linhaDuasColunas = document.createElement("div");
+            linhaDuasColunas.classList.add("linha-baixo");
+            linhaDuasColunas.innerHTML = `<div class="nome-instrumento">Baixo Duas Colunas</div>`;
+            const conjuntosDuasColunas = document.createElement("div");
+            conjuntosDuasColunas.classList.add("conjuntos-container");
+
+            // Adiciona 4 células de Baixo Duas Colunas por conjunto
+            for (let c = 0; c < matrizBateria[0].length; c++) {
+                const celulasCompasso = document.createElement("div");
+                celulasCompasso.classList.add("celulas-compasso");
+
+                for (let i = 0; i < 4; i++) {
+                    const celula = document.createElement("div");
+                    celula.classList.add("celula");
+                    celula.style.width = "87px";
+                    celula.dataset.conjunto = c;
+                    celula.dataset.tipo = "duasColunas";
+                    celula.dataset.indice = i;
+                    
+                    // Restaura a nota se existir
+                    if (matrizBaixo.duasColunas[c] && matrizBaixo.duasColunas[c][i]) {
+                        celula.textContent = matrizBaixo.duasColunas[c][i];
+                    }
+                    
+                    celula.addEventListener("click", () => mostrarMenuNotas(celula));
+                    configurarCliqueDuplo(celula);
+                    celulasCompasso.appendChild(celula);
+                }
+                conjuntosDuasColunas.appendChild(celulasCompasso);
+            }
+            linhaDuasColunas.appendChild(conjuntosDuasColunas);
+            baixoContainer.appendChild(linhaDuasColunas);
+
+            // Linha 4: Baixo padrão (8 células por conjunto)
+            const linhaPadrao = document.createElement("div");
+            linhaPadrao.classList.add("linha-baixo");
+            linhaPadrao.innerHTML = `<div class="nome-instrumento">Baixo Padrão</div>`;
+            const conjuntosPadrao = document.createElement("div");
+            conjuntosPadrao.classList.add("conjuntos-container");
+
+            // Adiciona 8 células de Baixo Padrão por conjunto
+            for (let c = 0; c < matrizBateria[0].length; c++) {
+                const celulasCompasso = document.createElement("div");
+                celulasCompasso.classList.add("celulas-compasso");
+
+                for (let i = 0; i < 8; i++) {
+                    const celula = document.createElement("div");
+                    celula.classList.add("celula");
+                    celula.dataset.conjunto = c;
+                    celula.dataset.tipo = "padrao";
+                    celula.dataset.indice = i;
+                    
+                    // Restaura a nota se existir
+                    if (matrizBaixo.padrao[c] && matrizBaixo.padrao[c][i]) {
+                        celula.textContent = matrizBaixo.padrao[c][i];
+                    }
+                    
+                    celula.addEventListener("click", () => mostrarMenuNotas(celula));
+                    configurarCliqueDuplo(celula);
+                    celulasCompasso.appendChild(celula);
+                }
+                conjuntosPadrao.appendChild(celulasCompasso);
+            }
+            linhaPadrao.appendChild(conjuntosPadrao);
+            baixoContainer.appendChild(linhaPadrao);
+        }
+
+        function configurarCliqueDuplo(celula) {
+            celula.addEventListener("dblclick", () => {
+                celula.textContent = "";
+                atualizarMatrizBaixo(celula);
+            });
+        }
+
+        function atualizarMatrizBaixo(celula) {
+            const conjunto = parseInt(celula.dataset.conjunto);
+            const tipo = celula.dataset.tipo;
+            const indice = celula.dataset.indice ? parseInt(celula.dataset.indice) : null;
+            const nota = celula.textContent;
+
+            if (tipo === "prolongado") {
+                matrizBaixo.prolongado[conjunto] = nota;
+            } else if (tipo === "meioCompasso") {
+                if (!matrizBaixo.meioCompasso[conjunto]) {
+                    matrizBaixo.meioCompasso[conjunto] = [];
+                }
+                matrizBaixo.meioCompasso[conjunto][indice] = nota;
+            } else if (tipo === "duasColunas") {
+                if (!matrizBaixo.duasColunas[conjunto]) {
+                    matrizBaixo.duasColunas[conjunto] = [];
+                }
+                matrizBaixo.duasColunas[conjunto][indice] = nota;
+            } else if (tipo === "padrao") {
+                if (!matrizBaixo.padrao[conjunto]) {
+                    matrizBaixo.padrao[conjunto] = [];
+                }
+                matrizBaixo.padrao[conjunto][indice] = nota;
+            }
+        }
+
+        function mostrarMenuNotas(celula) {
+            // Remove o menu existente, se houver
+            const menuExistente = document.querySelector(".menu-notas");
+            if (menuExistente) {
+                document.body.removeChild(menuExistente);
+            }
+
+            // Cria o menu
+            const menu = document.createElement("div");
+            menu.classList.add("menu-notas");
+
+            // Adiciona os botões de notas ao menu
+            notas.forEach(nota => {
+                const botao = document.createElement("button");
+                botao.textContent = nota;
+                botao.addEventListener("click", () => {
+                    celula.textContent = nota;
+                    atualizarMatrizBaixo(celula);
+                    document.body.removeChild(menu);
+                });
+                menu.appendChild(botao);
+            });
+
+            // Adiciona o menu ao corpo do documento
+            document.body.appendChild(menu);
+
+            // Posiciona o menu ao lado da célula clicada
+            const rect = celula.getBoundingClientRect();
+            menu.style.position = "absolute";
+            menu.style.left = `${rect.right + window.scrollX}px`;
+            menu.style.top = `${rect.top + window.scrollY}px`;
+
+            // Fecha o menu ao clicar fora dele ou fora da célula
+            const fecharMenu = (event) => {
+                if (!menu.contains(event.target) && !celula.contains(event.target)) {
+                    document.body.removeChild(menu);
+                    document.removeEventListener("click", fecharMenu);
+                }
+            };
+
+            // Adiciona o listener para fechar o menu
+            document.addEventListener("click", fecharMenu);
+        }
+
+        // Função para adicionar um novo conjunto
+        function adicionarConjunto() {
+            instrumentosBateria.forEach((_, linha) => {
+                matrizBateria[linha].push(Array(8).fill(false));
+            });
+            
+            // Inicializa as estruturas para o novo conjunto no baixo
+            matrizBaixo.prolongado.push("");
+            matrizBaixo.meioCompasso.push(["", ""]);
+            matrizBaixo.duasColunas.push(["", "", "", ""]);
+            matrizBaixo.padrao.push(["", "", "", "", "", "", "", ""]);
+            
+            criarMatrizBateria();
+            criarMatrizBaixo();
+        }
+
+        // Função para remover um conjunto
+        function removerConjunto(conjuntoIndex) {
+            if (matrizBateria[0].length <= 1) {
+                alert("Você precisa ter pelo menos um conjunto!");
+                return;
+            }
+            
+            // Remove o conjunto da bateria
+            instrumentosBateria.forEach((_, linha) => {
+                matrizBateria[linha].splice(conjuntoIndex, 1);
+            });
+            
+            // Remove o conjunto do baixo
+            matrizBaixo.prolongado.splice(conjuntoIndex, 1);
+            matrizBaixo.meioCompasso.splice(conjuntoIndex, 1);
+            matrizBaixo.duasColunas.splice(conjuntoIndex, 1);
+            matrizBaixo.padrao.splice(conjuntoIndex, 1);
+            
+            criarMatrizBateria();
+            criarMatrizBaixo();
+        }
+
+        function inicializarMatriz() {
+            matrizBateria = instrumentosBateria.map(() => [
+                Array(8).fill(false),
+                Array(8).fill(false)
+            ]);
+            
+            // Inicializa a matriz do baixo com 2 conjuntos
+            matrizBaixo = {
+                prolongado: ["", ""],
+                meioCompasso: [["", ""], ["", ""]],
+                duasColunas: [["", "", "", ""], ["", "", "", ""]],
+                padrao: [
+                    ["", "", "", "", "", "", "", ""],
+                    ["", "", "", "", "", "", "", ""]
+                ]
+            };
+            
+            criarMatrizBateria();
+            criarMatrizBaixo();
+        }
+
+        let intervaloTeste;
+        let audiosAtivos = {};
+
+        function play() {
+    stop();
+
+    const bpm = parseInt(document.getElementById("bpm").value);
+    const intervalo = (60 / bpm) * 1000 / 8;
+
+    let conjuntoAtual = 0;
+    let indiceAtual = 0;
+
+    function tocarCompasso() {
+        console.log(`Tocando: Conjunto ${conjuntoAtual}, Índice ${indiceAtual}`);
+
+        // Tocar bateria
+        instrumentosBateria.forEach((instrumento, linha) => {
+            if (matrizBateria[linha][conjuntoAtual][indiceAtual % 8]) {
+                const audio = new Audio(`audio/${instrumento.arquivo}`);
+                audio.play().catch(e => console.warn("Erro ao tocar bateria:", e));
+            }
+        });
+
+        // Tocar baixo
+        const linhasBaixo = document.querySelectorAll("#matriz-baixo .linha-baixo");
+        linhasBaixo.forEach((linha, linhaIndex) => {
+            const celulas = linha.querySelectorAll(".celula");
+            celulas.forEach((celula, celulaIndex) => {
+                const nota = celula.textContent;
+                if (nota && nota !== "Pausa") {
+                    let deveTocar = false;
+                    let duracaoNota = 0;
+
+                    switch (linhaIndex) {
+                        case 0:
+                            if (indiceAtual % 8 === 0 && celulaIndex === Math.floor(indiceAtual / 8)) {
+                                deveTocar = true;
+                                duracaoNota = intervalo * 8;
+                            }
+                            break;
+                        case 1:
+                            if (indiceAtual % 4 === 0 && celulaIndex === Math.floor(indiceAtual / 4)) {
+                                deveTocar = true;
+                                duracaoNota = intervalo * 4;
+                            }
+                            break;
+                        case 2:
+                            if (indiceAtual % 2 === 0 && celulaIndex === Math.floor(indiceAtual / 2)) {
+                                deveTocar = true;
+                                duracaoNota = intervalo * 2;
+                            }
+                            break;
+                        case 3:
+                            if (celulaIndex === indiceAtual) {
+                                deveTocar = true;
+                                duracaoNota = intervalo;
+                            }
+                            break;
+                    }
+
+                    if (deveTocar) {
+                        if (audiosAtivos[`${linhaIndex}-${celulaIndex}`]) {
+                            audiosAtivos[`${linhaIndex}-${celulaIndex}`].pause();
+                            audiosAtivos[`${linhaIndex}-${celulaIndex}`].currentTime = 0;
+                        }
+
+                        const audio = new Audio(`audio/${nota}.mp3`);
+                        audio.play().catch(e => console.warn("Erro ao tocar nota:", e));
+                        audiosAtivos[`${linhaIndex}-${celulaIndex}`] = audio;
+
+                        setTimeout(() => {
+                            if (audiosAtivos[`${linhaIndex}-${celulaIndex}`] === audio) {
+                                audio.pause();
+                                audio.currentTime = 0;
+                                delete audiosAtivos[`${linhaIndex}-${celulaIndex}`];
+                            }
+                        }, duracaoNota);
+                    }
+                }
+            });
+        });
+
+        // Iluminar células
+        const celulas = document.querySelectorAll(".celula");
+        celulas.forEach(celula => celula.classList.remove("iluminada"));
+        const celulasAtivas = document.querySelectorAll(`.celula[data-indice="${indiceAtual % 8}"]`);
+        celulasAtivas.forEach(celula => celula.classList.add("iluminada"));
+
+        // Avança o índice
+        indiceAtual++;
+        if (indiceAtual % 8 === 0) {
+            conjuntoAtual++;
+            if (conjuntoAtual >= matrizBateria[0].length) {
+                conjuntoAtual = 0;
+            }
+        }
+
+        if (indiceAtual >= 8 * matrizBateria[0].length) {
+            indiceAtual = 0;
+        }
+    }
+
+    intervaloTeste = setInterval(tocarCompasso, intervalo);
+}
+
+        function stop() {
+            clearInterval(intervaloTeste);
+            Object.values(audiosAtivos).forEach(audio => {
+                audio.pause();
+                audio.currentTime = 0;
+            });
+            audiosAtivos = {};
+
+            const celulas = document.querySelectorAll(".celula");
+            celulas.forEach(celula => {
+                celula.classList.remove("iluminada");
+            });
+        }
+
+        function salvarPersonalizacao() {
+            const dados = {
+                bateria: matrizBateria,
+                baixo: matrizBaixo
+            };
+            localStorage.setItem('personalizacaoMusical', JSON.stringify(dados));
+            alert("Personalização salva com sucesso!");
+        }
+
+        function carregarPersonalizacao() {
+            const dadosSalvos = localStorage.getItem('personalizacaoMusical');
+            if (dadosSalvos) {
+                const dados = JSON.parse(dadosSalvos);
+                matrizBateria = dados.bateria;
+                matrizBaixo = dados.baixo;
+                criarMatrizBateria();
+                criarMatrizBaixo();
+                alert("Personalização carregada com sucesso!");
+            } else {
+                alert("Nenhuma personalização salva encontrada!");
+            }
+        }
+
+        // Inicializa a matriz com 2 conjuntos ao carregar a página
+        window.onload = inicializarMatriz;
+
+
+
+// Função para pré-carregar áudios usados no MetronBass2
+function carregarAudios() {
+    const arquivos = [
+        'Bumbo.mp3', 'Caixa.mp3', 'Chimbal.mp3', 'Conducao.mp3',
+        'Tom1.mp3', 'Tom2.mp3', 'Surdo.mp3', 'Ataque.mp3'
+    ];
+    // Adicione aqui as notas que você usa no baixo
+    const notas = [
+        'A.mp3', 'C.mp3', 'E8.mp3', 'A8.mp3', 'G.mp3', 'D.mp3', 'F.mp3'
+        // Adicione outras conforme usa
+    ];
+
+    const caminho = 'audio/';
+    const promessas = [];
+
+    [...arquivos, ...notas].forEach(nome => {
+        const audio = new Audio(`${caminho}${nome}`);
+        const promessa = new Promise((resolve) => {
+            audio.addEventListener('canplaythrough', resolve, { once: true });
+            audio.addEventListener('error', () => {
+                console.warn(`Erro ao carregar: ${caminho}${nome}`);
+                resolve(); // Continua mesmo com erro
+            }, { once: true });
+            audio.load();
+        });
+        promessas.push(promessa);
+    });
+
+    return Promise.all(promessas)
+        .then(() => console.log('✅ Todos os áudios carregados'))
+        .catch(err => console.error('❌ Erro ao carregar áudios:', err));
+}
+
+// Inicializa a matriz e carrega os áudios ao carregar a página
+window.onload = () => {
+    inicializarMatriz();
+    carregarAudios().catch(console.error);
+};
+    </script>
+</body>
+
+</html>

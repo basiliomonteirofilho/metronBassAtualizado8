@@ -1,0 +1,673 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Metrônomo Personalizado</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #f4f4f4;
+      margin: 0;
+      padding: 0;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+    }
+    .container {
+      background-color: #fff;
+      padding: 20px;
+      border-radius: 10px;
+      box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+      width: 90%;
+      max-width: 600px;
+      text-align: center;
+    }
+    .controls {
+      margin-bottom: 20px;
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+    .controls select, .controls button, .controls input {
+      margin: 5px;
+      padding: 10px;
+      font-size: 16px;
+      flex: 1 1 auto;
+    }
+    .acordes {
+      margin-top: 20px;
+    }
+    .acordes button {
+      margin: 5px;
+      padding: 10px;
+      font-size: 16px;
+    }
+    .botoes-inferiores {
+      margin-top: 20px;
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+    .botoes-inferiores button {
+      margin: 5px;
+      padding: 10px;
+      font-size: 16px;
+      flex: 1 1 auto;
+    }
+    .contador {
+      margin-top: 20px;
+      font-size: 24px;
+      font-weight: bold;
+    }
+
+    /* Estilos para os modais */
+    .modal {
+      display: none;
+      position: fixed;
+      z-index: 1001;
+      left: 0;
+      top: 0;
+      width: 100%;
+      height: 100%;
+      background-color: rgba(0,0,0,0.4);
+    }
+    .modal-content {
+      background-color: #fefefe;
+      margin: 15% auto;
+      padding: 20px;
+      border: 1px solid #888;
+      width: 80%;
+      max-width: 500px;
+      border-radius: 5px;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+    }
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 15px;
+    }
+    .modal-title {
+      font-size: 1.5em;
+      font-weight: bold;
+    }
+    .close {
+      color: #aaa;
+      font-size: 28px;
+      font-weight: bold;
+      cursor: pointer;
+    }
+    .close:hover {
+      color: black;
+    }
+    .modal-body {
+      margin-bottom: 20px;
+    }
+    .modal-footer {
+      display: flex;
+      justify-content: flex-end;
+      gap: 10px;
+    }
+    .modal-footer button {
+      padding: 8px 16px;
+    }
+    .lista-salvos {
+      max-height: 300px;
+      overflow-y: auto;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      margin-top: 10px;
+    }
+    .item-salvo {
+      padding: 10px;
+      border-bottom: 1px solid #eee;
+      cursor: pointer;
+      display: flex;
+      justify-content: space-between;
+    }
+    .item-salvo:hover {
+      background-color: #f5f5f5;
+    }
+    .item-salvo:last-child {
+      border-bottom: none;
+    }
+    .item-salvo.nome {
+      font-weight: bold;
+    }
+    .item-salvo.data {
+      color: #666;
+      font-size: 0.9em;
+    }
+    .input-nome-arquivo {
+      width: 100%;
+      padding: 8px;
+      margin-top: 10px;
+      box-sizing: border-box;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+    }
+
+    @media (orientation: landscape) {
+      .container {
+        width: 80%;
+      }
+      .controls, .botoes-inferiores {
+        flex-direction: row;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Metrônomo Musical</h1>
+
+    <div class="controls">
+      <label for="bpm">BPM:</label>
+      <input type="number" id="bpm" value="60" min="1" max="300">
+      <select id="compasso">
+        <option value="2">Binário (2/4)</option>
+        <option value="3">Ternário (3/4)</option>
+        <option value="4">Quaternário (4/4)</option>
+        <option value="5">Quintenário (5/4)</option>
+        <option value="6">Sextenário (6/4)</option>
+        <option value="7">Septenário (7/4)</option>
+      </select>
+      <select id="modo">
+        <option value="tonica">Tônica</option>
+        <option value="arpejo">Arpejo</option>
+        <option value="click">Click</option>
+      </select>
+    </div>
+
+    <div class="acordes">
+      <select id="selecionar-acorde">
+        <option value="A">A</option>
+        <option value="Am">Am</option>
+        <option value="A°">A°</option>
+        <option value="A#">A#</option>
+        <option value="A#m">A#m</option>
+        <option value="A#°">A#°</option>
+        <option value="B">B</option>
+        <option value="Bm">Bm</option>
+        <option value="B°">B°</option>
+        <option value="C">C</option>
+        <option value="Cm">Cm</option>
+        <option value="C°">C°</option>
+        <option value="C#">C#</option>
+        <option value="C#m">C#m</option>
+        <option value="C#°">C#°</option>
+        <option value="D">D</option>
+        <option value="Dm">Dm</option>
+        <option value="D°">D°</option>
+        <option value="D#">D#</option>
+        <option value="D#m">D#m</option>
+        <option value="D#°">D#°</option>
+        <option value="E">E</option>
+        <option value="Em">Em</option>
+        <option value="E°">E°</option>
+        <option value="F">F</option>
+        <option value="Fm">Fm</option>
+        <option value="F°">F°</option>
+        <option value="F#">F#</option>
+        <option value="F#m">F#m</option>
+        <option value="F#°">F#°</option>
+        <option value="G">G</option>
+        <option value="Gm">Gm</option>
+        <option value="G°">G°</option>
+        <option value="G#">G#</option>
+        <option value="G#m">G#m</option>
+        <option value="G#°">G#°</option>
+      </select>
+      <button onclick="adicionarAcorde()">Adicionar Acorde</button>
+      <div id="lista-acordes"></div>
+    </div>
+
+    <!-- Botões principais -->
+    <div class="botoes-inferiores">
+      <button id="iniciar-parar" onclick="iniciarOuParar()">Iniciar</button>
+      <button onclick="resetar()">Resetar</button>
+      <button onclick="abrirModalSalvar()">Salvar</button>
+      <button onclick="abrirModalCarregar()">Salvos</button>
+    </div>
+
+    <!-- NOVO BOTÃO: ACESSAR METRONBASS2 -->
+    <div class="botoes-inferiores">
+      <button style="background-color: #4CAF50; color: white;" 
+              onclick="window.location.href='MetronBass2.html'">
+        ➜ Editar Bateria e Baixo
+      </button>
+    </div>
+
+    <div class="contador" id="contador"></div>
+  </div>
+
+  <!-- Modal para Salvar -->
+  <div id="modalSalvar" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <span class="modal-title">Salvar Composição</span>
+        <span class="close" onclick="fecharModal('modalSalvar')">&times;</span>
+      </div>
+      <div class="modal-body">
+        <label for="nomeArquivo">Nome do arquivo:</label>
+        <input type="text" id="nomeArquivo" class="input-nome-arquivo" placeholder="Digite um nome para sua composição">
+      </div>
+      <div class="modal-footer">
+        <button onclick="fecharModal('modalSalvar')">Cancelar</button>
+        <button onclick="salvarPersonalizacao()" class="btn-primary">Salvar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal para Carregar -->
+  <div id="modalCarregar" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <span class="modal-title">Carregar Composição</span>
+        <span class="close" onclick="fecharModal('modalCarregar')">&times;</span>
+      </div>
+      <div class="modal-body">
+        <p>Selecione uma composição salva:</p>
+        <div class="lista-salvos" id="listaSalvos"></div>
+      </div>
+      <div class="modal-footer">
+        <button onclick="fecharModal('modalCarregar')">Cancelar</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let Mostrar_BPM = 60;
+    let BPM = (60 / Mostrar_BPM) * 1000;
+    let acordes = [];
+    let intervaloBateria;
+    let intervaloBaixo;
+    let intervaloArpejo;
+    let audioAtual = null;
+    let bateriaAtiva = true;
+    let baixoAtivo = true;
+    let audioBaixo = null;
+    let contadorIntervalo = null;
+    let metronomoAtivo = false;
+
+    const arpejos = {
+      'A': ['A','CS','E8','A8'],
+      'Am': ['A','C','E8','A8'],
+      'A°': ['A','C','D8S','A8'],
+      'A#': ['AS','D','F8','A8S'],
+      'A#m': ['AS','C','F8','A8S'],
+      'A#°': ['AS','CS','E8','A8S'],
+      'B': ['B','Ds','F8S','B8'],
+      'Bm': ['B','D','F8S','B8'],
+      'B°': ['B','D','F8','B8'],
+      'C': ['C','E8','G8','C8'],
+      'Cm': ['C','DS','G8','C8'],
+      'C°': ['C','DS','F8S','C8'],
+      'C#': ['CS','F8','G8S','C8S'],
+      'C#m': ['CS','E8','G8S','C8S'],
+      'C#°': ['CS','E8','G8','C#8'],
+      'D': ['D','F8S','A8','D8'],
+      'Dm': ['D','F8','A8','D8'],
+      'D°': ['D','F8','G8S','D8'],
+      'D#': ['DS','G8','A8S','D8S'],
+      'D#m': ['DS','F8S','A8S','D8S'],
+      'D#°': ['DS','F8S','A8','D8S'],
+      'E': ['E','GS','B','E8'],
+      'Em': ['E','G','B','E8'],
+      'E°': ['E','G','AS','E8'],
+      'F': ['F','A','C','F8'],
+      'Fm': ['F','GS','C','F8'],
+      'F°': ['F','GS','B','F8'],
+      'F#': ['FS','AS','CS','F8S'],
+      'F#m': ['FS','A','CS','F8S'],
+      'F#°': ['FS','A','C','F8S'],
+      'G': ['G','B','D','G8'],
+      'Gm': ['G','AS','D','G8'],
+      'G°': ['G','AS','CS','G8'],
+      'G#': ['GS','C','DS','G8S'],
+      'G#m': ['GS','B','DS','G8S'],
+      'G#°': ['GS','B','D','G8S']
+    };
+
+    const padroesBateria = {
+      '2': [['Bumbo.mp3','Chimbal.mp3'],['Caixa.mp3','Chimbal.mp3']],
+      '3': [['Bumbo.mp3','Chimbal.mp3'],['Chimbal.mp3'],['Caixa.mp3','Chimbal.mp3']],
+      '4': [['Bumbo.mp3','Chimbal.mp3'],['Chimbal.mp3'],['Caixa.mp3','Chimbal.mp3'],['Chimbal.mp3']],
+      '5': [['Bumbo.mp3','Chimbal.mp3'],['Chimbal.mp3'],['Caixa.mp3','Chimbal.mp3'],['Chimbal.mp3'],['Chimbal.mp3']],
+      '6': [['Bumbo.mp3','Chimbal.mp3'],['Chimbal.mp3'],['Chimbal.mp3'],['Caixa.mp3','Chimbal.mp3'],['Chimbal.mp3'],['Chimbal.mp3']],
+      '7': [['Bumbo.mp3','Chimbal.mp3'],['Chimbal.mp3'],['Caixa.mp3','Chimbal.mp3'],['Bumbo.mp3','Chimbal.mp3'],['Chimbal.mp3'],['Caixa.mp3','Chimbal.mp3'],['Chimbal.mp3']]
+    };
+
+    // ✅ CAMINHOS CORRIGIDOS PARA GITHUB: usando pasta "audio/"
+    const audios = {
+      'Bumbo.mp3': new Audio('audio/Bumbo.mp3'),
+      'Chimbal.mp3': new Audio('audio/Chimbal.mp3'),
+      'Caixa.mp3': new Audio('audio/Caixa.mp3'),
+      'Ataque.mp3': new Audio('audio/Ataque.mp3')
+    };
+
+    // Funções de modais
+    function abrirModalSalvar() {
+      document.getElementById('nomeArquivo').value = '';
+      document.getElementById('modalSalvar').style.display = 'block';
+    }
+    function fecharModal(id) {
+      document.getElementById(id).style.display = 'none';
+    }
+    function obterComposicoesSalvas() {
+      const salvos = [];
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (key.startsWith('composicao_')) {
+          try {
+            const dados = JSON.parse(localStorage.getItem(key));
+            salvos.push({ nome: dados.nome, data: dados.data, key: key });
+          } catch (e) {
+            console.error('Erro ao ler composição salva:', e);
+          }
+        }
+      }
+      return salvos.sort((a, b) => new Date(b.data) - new Date(a.data));
+    }
+    function abrirModalCarregar() {
+      const modal = document.getElementById('modalCarregar');
+      const listaSalvos = document.getElementById('listaSalvos');
+      listaSalvos.innerHTML = '';
+      const salvos = obterComposicoesSalvas();
+      if (salvos.length === 0) {
+        listaSalvos.innerHTML = '<div class="item-salvo">Nenhuma composição salva encontrada</div>';
+      } else {
+        salvos.forEach((salvo, index) => {
+          const item = document.createElement('div');
+          item.className = 'item-salvo';
+          item.innerHTML = `
+            <div>
+              <span class="nome">${salvo.nome}</span>
+              <span class="data">${new Date(salvo.data).toLocaleString()}</span>
+            </div>`;
+          item.onclick = () => carregarPersonalizacao(index);
+          listaSalvos.appendChild(item);
+        });
+      }
+      modal.style.display = 'block';
+    }
+
+    function salvarPersonalizacao() {
+      const nomeArquivo = document.getElementById('nomeArquivo').value.trim();
+      if (!nomeArquivo) {
+        alert("Por favor, digite um nome para a composição!");
+        return;
+      }
+      const dados = {
+        nome: nomeArquivo,
+        data: new Date().toISOString(),
+        bpm: document.getElementById('bpm').value,
+        compasso: document.getElementById('compasso').value,
+        modo: document.getElementById('modo').value,
+        acordes: acordes
+      };
+      const chave = `composicao_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+      localStorage.setItem(chave, JSON.stringify(dados));
+      fecharModal('modalSalvar');
+      alert(`Composição "${nomeArquivo}" salva com sucesso!`);
+    }
+
+    function carregarPersonalizacao(index) {
+      const salvos = obterComposicoesSalvas();
+      if (index >= 0 && index < salvos.length) {
+        const dados = JSON.parse(localStorage.getItem(salvos[index].key));
+        if (dados) {
+          document.getElementById('bpm').value = dados.bpm;
+          document.getElementById('compasso').value = dados.compasso;
+          document.getElementById('modo').value = dados.modo;
+          acordes = dados.acordes;
+          atualizarListaAcordes();
+          fecharModal('modalCarregar');
+          alert(`Composição "${dados.nome}" carregada com sucesso!`);
+        } else {
+          alert("Erro ao carregar a composição selecionada.");
+        }
+      }
+    }
+
+    function adicionarAcorde() {
+      const acordeSelecionado = document.getElementById('selecionar-acorde').value;
+      if (acordeSelecionado && arpejos[acordeSelecionado]) {
+        acordes.push(acordeSelecionado);
+        atualizarListaAcordes();
+      } else {
+        alert("Acorde inválido!");
+      }
+    }
+
+    function atualizarListaAcordes() {
+      const lista = document.getElementById('lista-acordes');
+      lista.innerHTML = '';
+      acordes.forEach((acorde, index) => {
+        const div = document.createElement('div');
+        div.style.margin = '5px 0';
+        div.style.display = 'flex';
+        div.style.alignItems = 'center';
+        const span = document.createElement('span');
+        span.textContent = acorde;
+        span.style.marginRight = '10px';
+        span.style.minWidth = '50px';
+        const botaoRemover = document.createElement('button');
+        botaoRemover.textContent = 'Remover';
+        botaoRemover.onclick = () => removerAcorde(index);
+        botaoRemover.style.padding = '5px 10px';
+        div.appendChild(span);
+        div.appendChild(botaoRemover);
+        lista.appendChild(div);
+      });
+    }
+
+    function removerAcorde(index) {
+      acordes.splice(index, 1);
+      atualizarListaAcordes();
+    }
+
+    function iniciarOuParar() {
+      const botao = document.getElementById('iniciar-parar');
+      if (metronomoAtivo) {
+        pararMetronomo();
+        botao.textContent = 'Iniciar';
+        metronomoAtivo = false;
+      } else {
+        botao.textContent = 'Parar';
+        metronomoAtivo = true;
+        iniciar();
+      }
+    }
+
+    function pararMetronomo() {
+      clearInterval(intervaloBateria);
+      clearInterval(intervaloBaixo);
+      clearInterval(intervaloArpejo);
+      clearInterval(contadorIntervalo);
+      if (audioAtual) {
+        audioAtual.pause();
+        audioAtual.currentTime = 0;
+        audioAtual = null;
+      }
+      if (audioBaixo) {
+        audioBaixo.pause();
+        audioBaixo.currentTime = 0;
+        audioBaixo = null;
+      }
+      Object.values(audios).forEach(audio => {
+        audio.pause();
+        audio.currentTime = 0;
+      });
+      document.getElementById('contador').textContent = '';
+    }
+
+    function tocarClick() {
+      clearInterval(intervaloBateria);
+      clearInterval(intervaloArpejo);
+      let batIndex = 0;
+      const compasso = parseInt(document.getElementById('compasso').value);
+      intervaloBateria = setInterval(() => {
+        const audio = new Audio(batIndex === 0 ? 'audio/Ataque.mp3' : 'audio/Chimbal.mp3');
+        audio.play();
+        batIndex = (batIndex + 1) % compasso;
+      }, BPM);
+    }
+
+    function iniciar() {
+      clearInterval(intervaloBateria);
+      clearInterval(intervaloBaixo);
+      clearInterval(intervaloArpejo);
+      clearInterval(contadorIntervalo);
+      const modo = document.getElementById('modo').value;
+      Mostrar_BPM = parseInt(document.getElementById('bpm').value);
+      BPM = (60 / Mostrar_BPM) * 1000;
+
+      if (modo !== 'click') {
+        bateriaAtiva = true;
+        baixoAtivo = true;
+      }
+
+      const compasso = parseInt(document.getElementById('compasso').value);
+      const contadorElemento = document.getElementById('contador');
+      let contador = 0;
+
+      contadorIntervalo = setInterval(() => {
+        contadorElemento.textContent = `Preparando... ${contador + 1}`;
+        const audio = new Audio(contador === 0 ? 'audio/Ataque.mp3' : 'audio/Chimbal.mp3');
+        audio.play();
+        contador++;
+        if (contador >= compasso) {
+          clearInterval(contadorIntervalo);
+          contadorElemento.textContent = '';
+          setTimeout(() => {
+            if (modo === 'tonica') {
+              tocarTonica();
+            } else if (modo === 'arpejo') {
+              tocarArpejoEBateria();
+            } else if (modo === 'click') {
+              bateriaAtiva = false;
+              baixoAtivo = false;
+              tocarClick();
+            }
+          }, BPM);
+        }
+      }, BPM);
+    }
+
+    function tocarTonica() {
+      clearInterval(intervaloBateria);
+      clearInterval(intervaloArpejo);
+      clearInterval(intervaloBaixo);
+      let batIndex = 0;
+      let acordeIndex = 0;
+      const compasso = parseInt(document.getElementById('compasso').value);
+      const padraoBateria = padroesBateria[compasso];
+
+      if (bateriaAtiva && padraoBateria) {
+        intervaloBateria = setInterval(() => {
+          const batidas = padraoBateria[batIndex % padraoBateria.length];
+          batidas.forEach(som => {
+            const audio = audios[som].cloneNode();
+            audio.currentTime = 0;
+            audio.play();
+          });
+          batIndex++;
+        }, BPM);
+      }
+
+      intervaloBaixo = setInterval(() => {
+        if (!metronomoAtivo || acordes.length === 0) return;
+        if (audioAtual) {
+          audioAtual.pause();
+          audioAtual.currentTime = 0;
+        }
+        const acorde = acordes[acordeIndex];
+        const nota = arpejos[acorde][0];
+        audioAtual = new Audio(`audio/${nota}.mp3`);
+        audioAtual.play();
+        setTimeout(() => {
+          if (audioAtual) {
+            audioAtual.pause();
+            audioAtual.currentTime = 0;
+          }
+        }, BPM * 0.5);
+        acordeIndex = (acordeIndex + 1) % acordes.length;
+      }, BPM);
+    }
+
+    function tocarArpejoEBateria() {
+      clearInterval(intervaloArpejo);
+      clearInterval(intervaloBateria);
+      let acordeIndex = 0;
+      let notaIndex = 0;
+      let batIndex = 0;
+      const compasso = document.getElementById('compasso').value;
+      const padraoBateria = padroesBateria[compasso];
+
+      if (!padraoBateria) {
+        console.error(`Padrão de bateria não encontrado para o compasso: ${compasso}`);
+        return;
+      }
+
+      const tocarNotaArpejo = () => {
+        if (acordes.length > 0) {
+          if (audioAtual) {
+            audioAtual.pause();
+            audioAtual.currentTime = 0;
+            audioAtual = null;
+          }
+          const acorde = acordes[acordeIndex];
+          const notas = arpejos[acorde];
+          const nota = notas[notaIndex];
+          audioAtual = new Audio(`audio/${nota}.mp3`);
+          audioAtual.play();
+          setTimeout(() => {
+            if (audioAtual) {
+              audioAtual.pause();
+              audioAtual.currentTime = 0;
+              audioAtual = null;
+            }
+          }, (BPM / 4) * 0.8);
+          notaIndex = (notaIndex + 1) % notas.length;
+          if (notaIndex === 0) {
+            acordeIndex = (acordeIndex + 1) % acordes.length;
+          }
+        }
+      };
+
+      intervaloBateria = setInterval(() => {
+        if (bateriaAtiva) {
+          const batidas = padraoBateria[batIndex % padraoBateria.length];
+          batidas.forEach(som => {
+            const audio = audios[som].cloneNode();
+            audio.currentTime = 0;
+            audio.play();
+          });
+          batIndex++;
+        }
+      }, BPM);
+
+      intervaloArpejo = setInterval(tocarNotaArpejo, BPM / 4);
+    }
+
+    function resetar() {
+      pararMetronomo();
+      acordes = [];
+      atualizarListaAcordes();
+      document.getElementById('bpm').value = 60;
+      document.getElementById('compasso').value = 4;
+      document.getElementById('modo').value = 'tonica';
+      document.getElementById('iniciar-parar').textContent = 'Iniciar';
+      metronomoAtivo = false;
+    }
+
+    // Carregar áudios
+    Object.values(audios).forEach(audio => {
+      audio.load();
+    });
+  </script>
+</body>
+</html>
